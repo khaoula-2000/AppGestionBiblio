@@ -1,0 +1,7 @@
+9782070360024;Le Petit Prince;Antoine de Saint-Exupéry;1943;Conte;disponible
+9782253006329;1984;George Orwell;1949;Science-Fiction;disponible
+9782290032726;Le Seigneur des Anneaux : La Communauté de l'Anneau;J.R.R. Tolkien;1954;Fantasy;emprunte
+9782070400316;L'Étranger;Albert Camus;1942;Roman;disponible
+9782253010210;Fondation;Isaac Asimov;1951;Science-Fiction;disponible
+9782070360536;Voyage au bout de la nuit;Louis-Ferdinand Céline;1932;Roman;emprunte
+9782253003076;Le Comte de Monte-Cristo;Alexandre Dumas;1844;Roman;disponible
