@@ -2,8 +2,8 @@ from exceptions import LivreInexistantError
 from exceptions import LivreIndisponible
 from exceptions import MembreInexistantError
 from exceptions import QuotaEmpruntDepasseError
+from datetime import datetime
 import os
-import datetime
 from enum import Enum 
 class statutLivre(Enum):
      disponible ="disponible"
@@ -38,11 +38,12 @@ class Bibliotheque:
         self.livres=[]
         self.membres=[]
         self.historique=[]
-        
-    def chercherLivre(self,isbn):
-        for livre in self.livres:  
-            if livre.isbn == isbn:
-                return livre  
+       
+    def chercherLivre(self, isbn):
+        isbn_recherche = str(isbn).strip()
+        for livre in self.livres:
+           if str(livre.isbn).strip() == isbn_recherche:
+               return livre 
         raise LivreInexistantError()
   
     def chercherMembre(self,id):
@@ -58,9 +59,14 @@ class Bibliotheque:
         except LivreInexistantError:
             self.livres.append(livre)
      
-    def supprimerLivre(self,livre):
-        livreTrouve = self.chercherLivre(livre.isbn)
-        self.livres.remove(livreTrouve)
+    def supprimerLivre(self, isbn):
+       livre = self.chercherLivre(isbn)
+       for membre in self.membres:
+            if livre in membre.livreEmprunt:
+                raise Exception("Le livre est actuellement emprunte")    
+       self.livres.remove(livre)
+       return True
+      
     
     def emprunterLivre(self,membre,livre):
         membreTrouve = self.chercherMembre(membre.id) 
@@ -79,13 +85,24 @@ class Bibliotheque:
             'id_membre': membre.id,
             'action': 'emprunt'
         })
-    
+    def getMembresList(self):
+        membres = []
+        for m in self.membres:
+             membres.append((m.id, m.nom))
+        return sorted(membres, key=lambda x: x[1])  
+    def getLivresDisponiblesList(self):
+        livres = []
+        for l in self.livres:
+           if l.statut == statutLivre.disponible:
+              livres.append((l.isbn, f"{l.titre} (ISBN: {l.isbn})"))
+        return sorted(livres, key=lambda x: x[1])  
+           
     def rendreLivre(self,membre,livre):
         membreTrouve = self.chercherMembre(membre.id) 
         livreTrouve = self.chercherLivre(livre.isbn) 
 
         if livreTrouve.statut != statutLivre.emprunte:
-            raise LivreIndisponible("Le livre n'est pas emprunté")
+            raise LivreIndisponible()
         if livreTrouve not in membreTrouve.livreEmprunt:
             raise Exception("Ce membre n'a pas emprunté ce livre")   
         livreTrouve.rendre()
@@ -94,17 +111,15 @@ class Bibliotheque:
             'date': datetime.now(),
             'isbn': livre.isbn,
             'id_membre': membre.id,
-            'action': 'emprunt'
+            'action': 'retour'
         })
-   
     def inscrireMembre(self, membre):
-        try:
-            self.chercherMembre(membre.id)
-            raise Exception(f"le membre avec l'id{membre.id} existe deja .")
-        except MembreInexistantError:
-            self.membres.append(membre) 
+       if any(m.id == membre.id for m in self.membres):
+           raise Exception(f"Le membre avec l'ID {membre.id} existe déjà")
+       self.membres.append(membre)
+      
 
-    def chargerData(self):
+    def ChargerData(self):
         if os.path.exists('data/livres.txt'):
             with open ('data/livres.txt','r') as f:
                 for line in f:
@@ -113,28 +128,35 @@ class Bibliotheque:
                    livre = Livre(data[0], data[1], data[2], int(data[3]), data[4], statut)
                    self.livres.append(livre)
         if os.path.exists('data/membres.txt'):
-            with open ('data/membres.txt','r') as f:
+            with open ('data/membres.txt','r',encoding='utf-8') as f:
                 for line in f:
                     data =line.strip().split(';')
-                    membre = Membre(data[0],data[1])
-                    if len(data)>2 and data[2]:
-                        for isbn in data[2].split(','):
-                            try:
+                    if len(data) >= 2: 
+                       membre = Membre(data[0],data[1])
+                       if len(data)>2 and data[2]:
+                          for isbn in data[2].split(','):
+                             try:
                                 livre = self.chercherLivre(isbn)
+                                if livre.statut == statutLivre.disponible:
+                                    livre.changerStatut(statutLivre.emprunte)
                                 membre.livreEmprunt.append(livre)
-                            except LivreInexistantError:
-                                pass
-                    self.membres.append(membre)                        
-
+                             except LivreInexistantError:
+                                 print(f"Livre {isbn} non trouvé pour {membre.nom}")
+                       self.membres.append(membre)                        
+    
     def sauvegarderData(self):
-        with open('data/livres.txt','w') as f:
-            for livre in self.livres:
-               f.write(f"{livre.isbn};{livre.titre};{livre.auteur};{livre.annee};{livre.genre};{livre.statut.value}\n")
-        with open('data/membres.txt','w')as f:
-            for membre in self.membres:
-                f.write(f"{membre.id};{membre.nom};{membre.livreEmprunt}\n")
-        with open('data/historique.csv','w') as f:
-            f.write("date;isbn;id_membre;action\n")
-            for transaction in self.historique:
-                dateStr= transaction['date'].strtime("%Y-%m-%d %H:%M:%S")        
-                f.write(f"{dateStr};{transaction['isbn']};{transaction['id_membre']};{transaction['action']}\n")
+    
+        with open('data/livres.txt', 'w') as f:
+           for livre in self.livres:
+            f.write(f"{livre.isbn};{livre.titre};{livre.auteur};{livre.annee};{livre.genre};{livre.statut.value}\n")
+     
+        with open('data/membres.txt', 'w') as f:
+           for membre in self.membres:
+              livres = ",".join(l.isbn for l in membre.livreEmprunt)
+              f.write(f"{membre.id};{membre.nom};{livres}\n")
+
+        with open('data/historique.csv', 'w') as f:
+           for h in self.historique:
+              f.write(f"{h['date']};{h['isbn']};{h['id_membre']};{h['action']}\n")
+    
+        return True
