@@ -4,6 +4,7 @@ from exceptions import MembreInexistantError
 from exceptions import QuotaEmpruntDepasseError
 from datetime import datetime
 import os
+import csv
 from enum import Enum 
 class statutLivre(Enum):
      disponible ="disponible"
@@ -142,7 +143,21 @@ class Bibliotheque:
                                 membre.livreEmprunt.append(livre)
                              except LivreInexistantError:
                                  print(f"Livre {isbn} non trouvé pour {membre.nom}")
-                       self.membres.append(membre)                        
+                       self.membres.append(membre)    
+        if os.path.exists('data/historique.csv'):
+           with open('data/historique.csv', 'r', encoding='utf-8') as f:
+               reader = csv.DictReader(f, delimiter=';')
+               for row in reader:
+                 try:
+                    date_emprunt = datetime.strptime(row['date'], '%Y-%m-%d %H:%M:%S')
+                    self.historique.append({
+                        'date': date_emprunt,
+                        'isbn': row['isbn'],
+                        'id_membre': row['id_membre'],
+                        'action': row['action']
+                    })     
+                 except Exception as e:
+                    print(f"Erreur lecture ligne historique: {str(e)}")                                  
     
     def sauvegarderData(self):
     
@@ -155,8 +170,14 @@ class Bibliotheque:
               livres = ",".join(l.isbn for l in membre.livreEmprunt)
               f.write(f"{membre.id};{membre.nom};{livres}\n")
 
-        with open('data/historique.csv', 'w') as f:
-           for h in self.historique:
-              f.write(f"{h['date']};{h['isbn']};{h['id_membre']};{h['action']}\n")
-    
+        with open('data/historique.csv', 'w',encoding='utf-8', newline='') as f:
+            writer = csv.writer(f, delimiter=';')
+            writer.writerow(['date', 'isbn', 'id_membre', 'action'])  
+            for h in self.historique:
+                writer.writerow([
+                h['date'].strftime('%Y-%m-%d %H:%M:%S'), 
+                h['isbn'],
+                h['id_membre'],
+                h['action']
+            ])
         return True

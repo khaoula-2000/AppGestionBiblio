@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from bibliotheque import Bibliotheque, Livre, Membre,statutLivre
 from exceptions import LivreInexistantError
-
+from datetime import datetime, timedelta 
 import matplotlib.pyplot as plt
 from style import configureStyles 
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -41,13 +41,6 @@ class BibliothequeApp:
         self.CreateMembresTab()
         self.CreateEmpruntsTab()
         self.CreateStatsTab()
-        
-        ttk.Button(
-            self.root, 
-            text="Sauvegarder les données", 
-            command=self.Sauvegarder,
-            style='TButton'
-        ).pack(pady=10)
     
     def CreateLivresTab(self):
         tab = ttk.Frame(self.notebook)
@@ -194,28 +187,35 @@ class BibliothequeApp:
     def CreateStatsTab(self):
         tab = ttk.Frame(self.notebook)
         self.notebook.add(tab, text='Statistiques')
-        
-        frameGraphiques = ttk.Frame(tab)
-        frameGraphiques.pack(fill='both', expand=True, padx=10, pady=10)
-        
-        frameGenre = ttk.LabelFrame(frameGraphiques, text="Répartition par genre", padding=10)
-        frameGenre.grid(row=0, column=0, padx=5, pady=5, sticky='nsew')
+        tab.grid_columnconfigure(0, weight=1)
+        tab.grid_columnconfigure(1, weight=1)
+        tab.grid_rowconfigure(0, weight=1)
+        tab.grid_rowconfigure(1, weight=1)
+        frameTop = ttk.Frame(tab)
+        frameTop.grid(row=0, column=0, sticky="nsew", padx=10, pady=5)
+        frameBottom = ttk.Frame(tab)
+        frameBottom.grid(row=1, column=0, sticky="nsew", padx=10, pady=5)
+        frameGenre = ttk.LabelFrame(frameTop, text="Répartition par genre", padding=10)
+        frameGenre.pack(side='left', fill='both', expand=True, padx=5, pady=5)
         figGenre = self.GenererGraphiqueGenres()
         canvasGenre = FigureCanvasTkAgg(figGenre, master=frameGenre)
         canvasGenre.draw()
         canvasGenre.get_tk_widget().pack(fill='both', expand=True)
         
-        frameAuteurs = ttk.LabelFrame(frameGraphiques, text="Top 5 auteurs", padding=10)
-        frameAuteurs.grid(row=0, column=1, padx=5, pady=5, sticky='nsew')
-        
+        frameAuteurs = ttk.LabelFrame(frameBottom, text="Top 10 des auteurs", padding=10)
+        frameAuteurs.pack( fill='both', expand=True, padx=5, pady=5)
         figAuteurs = self.GenererGraphiqueAuteurs()
         canvasAuteurs = FigureCanvasTkAgg(figAuteurs, master=frameAuteurs)
         canvasAuteurs.draw()
         canvasAuteurs.get_tk_widget().pack(fill='both', expand=True)
-        
-        frameGraphiques.columnconfigure(0, weight=1)
-        frameGraphiques.columnconfigure(1, weight=1)
-        frameGraphiques.rowconfigure(0, weight=1)
+       
+        frameEmprunts = ttk.LabelFrame(frameTop, text="Activité des emprunts (30 derniers jours)", padding=10)
+        frameEmprunts.pack(side='left',fill='both', expand=True, padx=5, pady=5)
+        figEmprunts = self.GenererCourbeEmprunts()
+        canvasEmprunts = FigureCanvasTkAgg(figEmprunts, master=frameEmprunts)
+        canvasEmprunts.draw()
+        canvasEmprunts.get_tk_widget().pack(fill='both', expand=True)
+
     
     def GenererGraphiqueGenres(self):
         genres = {}
@@ -236,20 +236,49 @@ class BibliothequeApp:
         for livre in self.biblio.livres:
             auteurs[livre.auteur] = auteurs.get(livre.auteur, 0) + 1
         
-        fig, ax = plt.subplots(figsize=(5, 4))
+        fig, ax = plt.subplots(figsize=(12, 4))
         if auteurs:
-            topAuteurs = sorted(auteurs.items(), key=lambda x: x[1], reverse=True)[:5]
+            topAuteurs = sorted(auteurs.items(), key=lambda x: x[1], reverse=True)[:10]
             noms = [a[0] for a in topAuteurs]
             valeurs = [a[1] for a in topAuteurs]
             
-            bars = ax.barh(noms[::-1], valeurs[::-1])
+            bars = ax.bar(noms, valeurs, color='skyblue')
+            ax.set_title('Top 10 des auteurs les plus populaires')
+            ax.set_xlabel('Auteurs')
+            ax.set_ylabel('Nombre de livres')
             ax.bar_label(bars)
-            ax.set_title('Top 5 auteurs')
         else:
             ax.text(0.5, 0.5, 'Aucune donnée', ha='center', va='center')
-        fig.tight_layout()
+            fig.tight_layout()
         return fig
+    def GenererCourbeEmprunts(self):
+        if not hasattr(self.biblio, 'historique'):
+            self.biblio.historique = []
+        aujourdhui = datetime.now()
+        dates = [aujourdhui - timedelta(days=i) for i in range(30)][::-1]
+        date_str = [d.strftime('%Y-%m-%d') for d in dates]
+        compteurs = {d: 0 for d in date_str}
+        for entry in self.biblio.historique:
+           if entry['action'] == 'emprunt':
+              date_emprunt = entry['date'].strftime('%Y-%m-%d')
+              if date_emprunt in compteurs:
+                  compteurs[date_emprunt] += 1
     
+        valeurs = [compteurs[d] for d in date_str]
+    
+        fig, ax = plt.subplots(figsize=(8, 4))
+        if any(v > 0 for v in valeurs):
+            ax.plot(date_str, valeurs, 'go-', linewidth=2, markersize=8, label='Emprunts')
+            ax.set_title('Activité des emprunts (30 derniers jours)')
+            ax.set_xlabel('Date')
+            ax.set_ylabel('Nombre d\'emprunts')
+            step = max(1, len(date_str) // 5)
+            ax.set_xticks(date_str[::step])
+            plt.xticks(rotation=45)
+            fig.tight_layout()
+        else:
+            ax.text(0.5, 0.5, 'Aucune donnée d\'emprunt récente', ha='center', va='center')
+        return fig
     def ActualiserLivres(self):
         self.treeLivres.delete(*self.treeLivres.get_children())
         for livre in sorted(self.biblio.livres, key=lambda x: x.titre):
@@ -303,9 +332,8 @@ class BibliothequeApp:
              messagebox.showwarning("Avertissement", "Veuillez sélectionner un livre")
              return
         isbn = self.treeLivres.item(selected[0])['values'][0]
-    
         try:
-           livre = self.biblio.chercherLivre(Livre(isbn, "", "", 0, ""))
+           livre = self.biblio.chercherLivre(isbn)
         
            if messagebox.askyesno("Confirmation", f"Supprimer le livre ISBN: {isbn}?"):
           
@@ -345,7 +373,7 @@ class BibliothequeApp:
         livre_temp = Livre(livre_isbn, "", "", 0, "")
         
         self.biblio.emprunterLivre(membre_temp, livre_temp)
-        
+        self.biblio.sauvegarderData()
         self.entryEmpruntId.set('')
         self.entryEmpruntIsbn.set('')
         self.ActualiserLivres()
@@ -358,19 +386,16 @@ class BibliothequeApp:
     def RendreLivre(self):
      try:
         selection_membre = self.entryRetourId.get()
-        selection_livre = self.entryRetourIsbn.get()
-        
+        selection_livre = self.entryRetourIsbn.get()   
         if not selection_membre or not selection_livre:
-            raise ValueError("Veuillez sélectionner un membre et un livre")
-        
+            raise ValueError("Veuillez sélectionner un membre et un livre")   
         membre_id = selection_membre.split(" - ")[0].strip()
-        livre_isbn = selection_livre.split(" - ")[0].strip()
-        
+        livre_isbn = selection_livre.split(" - ")[0].strip()  
         membreTemp = Membre(membre_id, "")  
         livreTemp = Livre(livre_isbn, "", "", 0, "")  
         
         self.biblio.rendreLivre(membreTemp, livreTemp)
-        
+        self.biblio.sauvegarderData()
         self.entryRetourId.set('')
         self.entryRetourIsbn.set('')
         self.ActualiserLivres()

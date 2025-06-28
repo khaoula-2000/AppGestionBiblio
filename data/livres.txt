@@ -1,17 +1,13 @@
 9782070360024;Le Petit Prince;Antoine de Saint-ExupÃƒÂ©ry;1943;Conte;emprunte
-9782253006329;1984;George Orwell;1949;Science-Fiction;emprunte
 9782290032726;Le Seigneur des Anneaux La CommunautÃƒÂ© de l'Anneau;J.R.R. Tolkien;1954;Fantasy;emprunte
 9782070400316;L'etranger;Albert Camus;1942;Roman;emprunte
-9782253003076;Le Comte de Monte-Cristo;Alexandre Dumas;1844;Roman;disponible
+9782253003076;Le Comte de Monte-Cristo;Alexandre Dumas;1844;Roman;emprunte
 9782070360420;Madame Bovary;Gustave Flaubert;1857;Roman;disponible
 9782070360025;L'Écume des jours;Boris Vian;1947;Roman;emprunte
-9782253091579;Fondation;Isaac Asimov;1951;Science-Fiction;disponible
 9782070368224;Bel-Ami;Guy de Maupassant;1885;Roman;disponible
 9782253006333;Le Meilleur des mondes;Aldous Huxley;1932;Science-Fiction;emprunte
-9782070413118;La Peste;Albert Camus;1947;Roman;disponible
-9782253006340;Fahrenheit 451;Ray Bradbury;1953;Science-Fiction;disponible
-9782070360026;Le Horla;Guy de Maupassant;1887;Nouvelle;emprunte
-9782253006357;Dune;Frank Herbert;1965;Science-Fiction;disponible
-9782070360537;Germinal;Émile Zola;1885;Roman;disponible
+9782070413118;La Peste;Albert Camus;1947;Roman;emprunte
+9782070360537;Germinal;Émile Zola;1885;Roman;emprunte
 9782253006364;Ubik;Philip K. Dick;1969;Science-Fiction;emprunte
 9782070408503;Les Fleurs du Mal;Charles Baudelaire;1857;Poésie;disponible
+9782253010210;les miserables;Victor Hugo;1890;Roman;emprunte
